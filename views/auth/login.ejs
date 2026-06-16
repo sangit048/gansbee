@@ -28,15 +28,19 @@
       <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
     </form>
     <div id="message" class="mt-3 text-center"></div>
+    <hr />
+    <p class="text-center mb-0">
+      Chưa có tài khoản? <a href="/register">Đăng ký</a>
+    </p>
   </div>
 </div>
 
 <script>
-  // Trong file login.ejs hoặc file JavaScript liên quan
   document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
+    const messageDiv = document.getElementById("message");
 
     const response = await fetch("/api/auth/login", {
       method: "POST",
@@ -45,24 +49,11 @@
     });
 
     const data = await response.json();
-    const messageDiv = document.getElementById("message");
 
     if (response.ok) {
       if (data.user && data.user.role === "admin") {
         localStorage.setItem("token", data.token);
-        // Tải lại trang /dashboard với token trong header
-        const dashboardResponse = await fetch("/dashboard", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${data.token}`,
-          },
-        });
-        if (dashboardResponse.ok) {
-          window.location.href = "/dashboard";
-        } else {
-          const errorData = await dashboardResponse.json();
-          messageDiv.innerHTML = `<div class="text-danger">${errorData.message}</div>`;
-        }
+        window.location.href = "/";
       } else {
         messageDiv.innerHTML =
           '<div class="text-danger">Bạn không phải admin!</div>';

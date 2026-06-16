@@ -9,20 +9,45 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
 
 // Đăng ký
+// router.post("/register", async (req, res) => {
+//   try {
+//     const { name, email, password, role = "user" } = req.body;
+//     const exist = await User.findOne({ email });
+//     if (exist) return res.status(400).json({ message: "Email đã tồn tại" });
+
+//     const hashed = await bcrypt.hash(password, 10);
+//     const user = new User({ name, email, password: hashed, role });
+//     await user.save();
+
+//     const token = jwt.sign(
+//       { id: user._id, name: user.name, email: user.email, role: user.role },
+//       JWT_SECRET,
+//       { expiresIn: "1d" }
+//     );
+
+//     res.json({
+//       message: "Đăng ký thành công",
+//       user: { id: user._id, name, email, role },
+//       token,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password, role = "user" } = req.body;
     const exist = await User.findOne({ email });
     if (exist) return res.status(400).json({ message: "Email đã tồn tại" });
 
-    const hashed = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashed, role });
+    // Bỏ dòng hash thủ công, lưu password gốc, model sẽ tự hash
+    const user = new User({ name, email, password, role });
     await user.save();
 
     const token = jwt.sign(
       { id: user._id, name: user.name, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     res.json({
@@ -34,7 +59,6 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 // Đăng nhập
 // router.post("/login", async (req, res) => {
 //   try {
@@ -89,7 +113,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user._id, name: user.name, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     res.json({

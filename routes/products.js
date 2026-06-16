@@ -39,7 +39,7 @@ router.get("/", async (req, res) => {
         }));
 
         const images = (p.images || []).map((img) =>
-          img.startsWith("http") ? img : BASE_URL + img
+          img.startsWith("http") ? img : BASE_URL + img,
         );
 
         let category = p.category;
@@ -58,7 +58,7 @@ router.get("/", async (req, res) => {
           category,
           variants: variantsWithFullImage, // dùng mảng đã xử lý
         };
-      })
+      }),
     );
 
     res.json(productsWithVariants);
@@ -88,7 +88,7 @@ router.get("/:id", async (req, res) => {
     }));
 
     const images = (product.images || []).map((img) =>
-      img.startsWith("http") ? img : BASE_URL + img
+      img.startsWith("http") ? img : BASE_URL + img,
     );
     let category = product.category;
     if (category && category.image) {
@@ -153,6 +153,55 @@ router.post("/", upload.array("images", 5), async (req, res) => {
 
     await product.save();
     res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// 👉 API: Lấy tất cả sản phẩm - đường dẫn khác (/all)
+router.get("/all", async (req, res) => {
+  try {
+    const products = await Product.find().populate("category").lean();
+
+    const productsWithVariants = await Promise.all(
+      products.map(async (p) => {
+        const variants = await ProductVariant.find({ product: p._id }).lean();
+
+        // Xử lý image cho variant
+        const variantsWithFullImage = variants.map((v) => ({
+          ...v,
+          image: v.image
+            ? v.image.startsWith("http")
+              ? v.image
+              : BASE_URL + v.image
+            : null,
+        }));
+
+        // Xử lý images của product
+        const images = (p.images || []).map((img) =>
+          img.startsWith("http") ? img : BASE_URL + img,
+        );
+
+        // Xử lý image của category
+        let category = p.category;
+        if (category && category.image) {
+          category = {
+            ...category,
+            image: category.image.startsWith("http")
+              ? category.image
+              : BASE_URL + category.image,
+          };
+        }
+
+        return {
+          ...p,
+          images,
+          category,
+          variants: variantsWithFullImage,
+        };
+      }),
+    );
+
+    res.json(productsWithVariants);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
