@@ -1,0 +1,65 @@
+<h3>Biến thể sản phẩm: <%= product.name %></h3>
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Size</th>
+      <th>Màu</th>
+      <th>Giá</th>
+      <th>Giá giảm</th>
+      <th>Tồn kho</th>
+      <th>Hình ảnh</th>
+      <!-- Thêm cột hình ảnh -->
+      <th>Hành động</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% variants.forEach(v => { %>
+    <tr>
+      <td><%= v.size %></td>
+      <td><%= v.color %></td>
+      <td><%= v.price %></td>
+      <td><%= v.discountPrice %></td>
+      <td><%= v.stock %></td>
+      <td>
+        <% if (v.image) { %>
+        <img
+          src="<%= v.image %>"
+          alt="variant"
+          width="60"
+          style="border-radius: 6px"
+        />
+        <% } else { %>
+        <span>Không có</span>
+        <% } %>
+      </td>
+      <td>
+        <form
+          method="POST"
+          action="/productVariants/<%= v._id %>?_method=DELETE"
+          style="display: inline"
+        >
+          <button type="submit" onclick="return confirm('Xóa?')">Xóa</button>
+        </form>
+        <!-- Sửa: bạn có thể làm modal hoặc chuyển sang trang sửa -->
+      </td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<h4>Thêm biến thể mới</h4>
+<form
+  method="POST"
+  action="/productVariants"
+  class="mt-3"
+  enctype="multipart/form-data"
+>
+  <input type="hidden" name="product" value="<%= product._id %>" />
+  <input type="text" name="size" placeholder="Size" required />
+  <input type="text" name="color" placeholder="Màu" required />
+  <input type="number" name="price" placeholder="Giá" required />
+  <input type="number" name="discountPrice" placeholder="Giá giảm" />
+  <input type="number" name="stock" placeholder="Tồn kho" required />
+  <input type="file" name="image" accept="image/*" />
+  <button type="submit">Thêm</button>
+</form>

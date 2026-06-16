@@ -1,0 +1,80 @@
+<!-- filepath: d:\GNASWWWBE\gnaswwwbe\views\orders\list.ejs -->
+<h3>Danh sách đơn hàng</h3>
+<table class="table table-hover table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>Mã đơn</th>
+      <th>User</th>
+      <th>Sản phẩm</th>
+      <th>Tổng tiền</th>
+      <th>Trạng thái</th>
+      <th>Hành động</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% orders.forEach(o => { %>
+    <tr>
+      <td><%= o._id %></td>
+      <td><%= o.user?.email %></td>
+      <td>
+        <% o.products.forEach(pr => { %>
+        <span><%= pr.product?.name %> (x<%= pr.quantity %>)</span><br />
+        <% }) %>
+      </td>
+      <td><%= o.totalPrice %></td>
+      <td><%= o.status %></td>
+      <td>
+        <a href="/orders/<%= o._id %>" class="btn btn-info btn-sm"
+          >Xem chi tiết</a
+        >
+        <% if (o.status === 'pending') { %>
+        <form
+          action="/orders/<%= o._id %>/approve"
+          method="POST"
+          style="display: inline"
+        >
+          <button type="submit" class="btn btn-success btn-sm">Duyệt</button>
+        </form>
+        <% } %> <% if (o.status === 'approved') { %>
+        <form
+          action="/orders/<%= o._id %>/paid"
+          method="POST"
+          style="display: inline"
+        >
+          <button type="submit" class="btn btn-primary btn-sm">
+            Xác nhận đã thanh toán
+          </button>
+        </form>
+        <% } %> <% if (o.status === 'paid') { %>
+        <form
+          action="/orders/<%= o._id %>/shipped"
+          method="POST"
+          style="display: inline"
+        >
+          <button type="submit" class="btn btn-warning btn-sm">
+            Giao hàng
+          </button>
+        </form>
+        <% } %> <% if (o.status === 'delivered') { %>
+        <form
+          action="/orders/<%= o._id %>/completed"
+          method="POST"
+          style="display: inline"
+        >
+          <button type="submit" class="btn btn-success btn-sm">Hoàn tất</button>
+        </form>
+        <% } %> <% if (o.status !== 'cancelled' && o.status !== 'completed') {
+        %>
+        <form
+          action="/orders/<%= o._id %>/cancel"
+          method="POST"
+          style="display: inline"
+        >
+          <button type="submit" class="btn btn-danger btn-sm">Hủy</button>
+        </form>
+        <% } %>
+      </td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>

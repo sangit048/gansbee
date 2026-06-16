@@ -1,0 +1,21 @@
+<h3>Danh sách đánh giá</h3>
+<table class="table table-hover table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>User</th>
+      <th>Sản phẩm</th>
+      <th>Nội dung</th>
+      <th>Sao</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% reviews.forEach(r => { %>
+    <tr>
+      <td><%= r.user?.name %></td>
+      <td><%= r.product?.name %></td>
+      <td><%= r.content %></td>
+      <td><%= r.rating %> ⭐</td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>

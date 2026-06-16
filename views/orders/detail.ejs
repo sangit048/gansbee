@@ -1,0 +1,113 @@
+<!-- views/orders/detail.ejs -->
+<h3>Chi tiết đơn hàng: <%= order?._id || "Không rõ mã đơn" %></h3>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <strong>Thông tin đơn hàng</strong>
+  </div>
+  <div class="card-body">
+    <p><strong>Mã đơn:</strong> <%= order?._id || "N/A" %></p>
+    <p>
+      <strong>Ngày tạo:</strong>
+      <%= order?.createdAt ? new Date(order.createdAt).toLocaleString() : "N/A"
+      %>
+    </p>
+    <p>
+      <strong>Người dùng:</strong>
+      <%= order?.user?.email || "Không rõ" %> (ID: <%= order?.user?._id || "N/A"
+      %>)
+    </p>
+    <p><strong>Trạng thái:</strong> <%= order?.status || "N/A" %></p>
+    <p>
+      <strong>Tổng tiền:</strong>
+      <%= order?.totalPrice !== undefined ? order.totalPrice.toLocaleString() +
+      " VND" : "0 VND" %>
+    </p>
+    <p>
+      <strong>Phương thức thanh toán:</strong>
+      <%= order?.payment?.method || "Chưa chọn" %> (Trạng thái: <%=
+      order?.payment?.status || "N/A" %>)
+    </p>
+    <p>
+      <strong>Vận chuyển:</strong>
+      <%= order?.shipping?.provider || "N/A" %> (Trạng thái: <%=
+      order?.shipping?.status || "N/A" %>, Phí: <%= order?.shipping?.fee !==
+      undefined ? order.shipping.fee.toLocaleString() + " VND" : "0 VND" %>,
+      Tracking: <%= order?.shipping?.trackingNumber || "Chưa có" %>)
+    </p>
+    <p>
+      <strong>Địa chỉ giao hàng:</strong>
+      <%= order?.shippingAddress?.fullName || "N/A" %>, <%=
+      order?.shippingAddress?.phone || "N/A" %>, <%=
+      order?.shippingAddress?.address || "N/A" %>, <%=
+      order?.shippingAddress?.city || "N/A" %>, <%=
+      order?.shippingAddress?.country || "N/A" %>
+    </p>
+    <% if (order?.voucher) { %>
+    <p>
+      <strong>Voucher:</strong>
+      <%= order.voucher.code || "N/A" %> (Giảm: <%= order.voucher?.discount !==
+      undefined ? order.voucher.discount.toLocaleString() : 0 %> <%=
+      order.voucher?.type === "percentage" ? "%" : "VND" %>)
+    </p>
+    <% } %>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <strong>Danh sách sản phẩm</strong>
+  </div>
+  <div class="card-body">
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Sản phẩm</th>
+          <th>Biến thể</th>
+          <th>Số lượng</th>
+          <th>Giá</th>
+          <th>Tổng</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (order?.products?.length) { %> <% order.products.forEach(pr => {
+        %>
+        <tr>
+          <td><%= pr?.product?.name || "Không rõ tên" %></td>
+          <td><%= pr?.variant?.name || "Không có" %></td>
+          <td><%= pr?.quantity || 0 %></td>
+          <td>
+            <%= pr?.product?.price !== undefined ?
+            pr.product.price.toLocaleString() + " VND" : "Chưa có giá" %>
+          </td>
+          <td>
+            <%= pr?.product?.price !== undefined ? (pr.product.price *
+            (pr.quantity || 0)).toLocaleString() + " VND" : "0 VND" %>
+          </td>
+        </tr>
+        <% }) %> <% } else { %>
+        <tr>
+          <td colspan="5" class="text-center">Không có sản phẩm nào</td>
+        </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<a href="/orders" class="btn btn-secondary">Quay lại danh sách</a>
+
+<% if (order?.status === "pending") { %>
+<form action="/orders/<%= order._id %>/approve" method="POST" class="d-inline">
+  <button type="submit" class="btn btn-success ms-2">Duyệt đơn hàng</button>
+</form>
+<% } %> <% if (order?.status !== "cancelled" && order?.status !== "completed") {
+%>
+<form action="/orders/<%= order._id %>/cancel" method="POST" class="d-inline">
+  <button type="submit" class="btn btn-danger ms-2">Hủy đơn hàng</button>
+</form>
+<% } %> <% if (order?.status === "shipped") { %>
+<form action="/orders/<%= order._id %>/complete" method="POST" class="d-inline">
+  <button type="submit" class="btn btn-primary ms-2">Hoàn thành</button>
+</form>
+<% } %>

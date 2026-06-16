@@ -1,0 +1,19 @@
+<h3>Danh sách voucher</h3>
+<table class="table table-hover table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>Mã</th>
+      <th>Giảm (%)</th>
+      <th>Ngày hết hạn</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% vouchers.forEach(v => { %>
+    <tr>
+      <td><%= v.code %></td>
+      <td><%= v.discount %>%</td>
+      <td><%= v.expiry.toDateString() %></td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>

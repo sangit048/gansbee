@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý Danh mục</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen p-6">
+    <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-2xl font-bold mb-6 text-center">📂 Quản lý Danh mục</h2>
+
+      <!-- Form thêm -->
+      <div class="mb-8 border-b pb-6">
+        <h3 class="text-lg font-semibold mb-3">➕ Thêm danh mục</h3>
+        <input
+          type="text"
+          id="addName"
+          placeholder="Tên danh mục"
+          class="border p-2 w-full mb-2 rounded"
+        />
+        <textarea
+          id="addDescription"
+          placeholder="Mô tả"
+          class="border p-2 w-full mb-2 rounded"
+        ></textarea>
+        <input type="file" id="addImage" class="mb-2" onchange="previewAdd()" />
+        <div id="previewAddImg" class="mb-2"></div>
+        <button
+          onclick="addCategory()"
+          class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+        >
+          Thêm
+        </button>
+        <p id="addMsg" class="text-sm mt-2"></p>
+      </div>
+
+      <!-- Form sửa -->
+      <div class="mb-8 border-b pb-6">
+        <h3 class="text-lg font-semibold mb-3">✏️ Sửa danh mục</h3>
+        <input
+          type="text"
+          id="editId"
+          placeholder="ID danh mục"
+          class="border p-2 w-full mb-2 rounded"
+        />
+        <input
+          type="text"
+          id="editName"
+          placeholder="Tên danh mục"
+          class="border p-2 w-full mb-2 rounded"
+        />
+        <textarea
+          id="editDescription"
+          placeholder="Mô tả"
+          class="border p-2 w-full mb-2 rounded"
+        ></textarea>
+        <input
+          type="file"
+          id="editImage"
+          class="mb-2"
+          onchange="previewEdit()"
+        />
+        <div id="previewEditImg" class="mb-2"></div>
+        <button
+          onclick="editCategory()"
+          class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Sửa
+        </button>
+        <p id="editMsg" class="text-sm mt-2"></p>
+      </div>
+
+      <!-- Form xóa -->
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold mb-3">🗑️ Xóa danh mục</h3>
+        <input
+          type="text"
+          id="deleteId"
+          placeholder="ID danh mục"
+          class="border p-2 w-full mb-2 rounded"
+        />
+        <button
+          onclick="deleteCategory()"
+          class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          Xóa
+        </button>
+        <p id="deleteMsg" class="text-sm mt-2"></p>
+      </div>
+
+      <!-- Danh sách -->
+      <div id="categoryList" class="mt-8"></div>
+    </div>
+
+    <script>
+      const api = "http://localhost:3000/api/categories";
+
+      // preview ảnh khi chọn file
+      function previewAdd() {
+        const file = document.getElementById("addImage").files[0];
+        const preview = document.getElementById("previewAddImg");
+        preview.innerHTML = file
+          ? `<img src="${URL.createObjectURL(
+              file
+            )}" class="w-32 h-32 object-cover rounded border" />`
+          : "";
+      }
+
+      function previewEdit() {
+        const file = document.getElementById("editImage").files[0];
+        const preview = document.getElementById("previewEditImg");
+        preview.innerHTML = file
+          ? `<img src="${URL.createObjectURL(
+              file
+            )}" class="w-32 h-32 object-cover rounded border" />`
+          : "";
+      }
+
+      // thêm category
+      async function addCategory() {
+        const name = document.getElementById("addName").value;
+        const description = document.getElementById("addDescription").value;
+        const image = document.getElementById("addImage").files[0];
+        const msg = document.getElementById("addMsg");
+
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("description", description);
+        if (image) formData.append("image", image);
+
+        try {
+          const res = await fetch(api, { method: "POST", body: formData });
+          if (res.ok) {
+            msg.textContent = "✅ Thêm thành công!";
+            msg.className = "text-green-600 text-sm";
+            loadCategories();
+          } else {
+            msg.textContent = "❌ Lỗi khi thêm!";
+            msg.className = "text-red-600 text-sm";
+          }
+        } catch {
+          msg.textContent = "⚠️ Server không phản hồi!";
+          msg.className = "text-red-600 text-sm";
+        }
+      }
+
+      // sửa category
+      async function editCategory() {
+        const id = document.getElementById("editId").value;
+        const name = document.getElementById("editName").value;
+        const description = document.getElementById("editDescription").value;
+        const image = document.getElementById("editImage").files[0];
+        const msg = document.getElementById("editMsg");
+
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("description", description);
+        if (image) formData.append("image", image);
+
+        try {
+          const res = await fetch(`${api}/${id}`, {
+            method: "PUT",
+            body: formData,
+          });
+          if (res.ok) {
+            msg.textContent = "✅ Sửa thành công!";
+            msg.className = "text-green-600 text-sm";
+            loadCategories();
+          } else {
+            msg.textContent = "❌ Không tìm thấy ID!";
+            msg.className = "text-red-600 text-sm";
+          }
+        } catch {
+          msg.textContent = "⚠️ Server không phản hồi!";
+          msg.className = "text-red-600 text-sm";
+        }
+      }
+
+      // xóa category
+      async function deleteCategory() {
+        const id = document.getElementById("deleteId").value;
+        const msg = document.getElementById("deleteMsg");
+
+        try {
+          const res = await fetch(`${api}/${id}`, { method: "DELETE" });
+          if (res.ok) {
+            msg.textContent = "✅ Xóa thành công!";
+            msg.className = "text-green-600 text-sm";
+            loadCategories();
+          } else {
+            msg.textContent = "❌ Không tìm thấy ID!";
+            msg.className = "text-red-600 text-sm";
+          }
+        } catch {
+          msg.textContent = "⚠️ Server không phản hồi!";
+          msg.className = "text-red-600 text-sm";
+        }
+      }
+
+      // load danh sách
+      async function loadCategories() {
+        try {
+          const res = await fetch(api);
+          const categories = await res.json();
+          const list = document.getElementById("categoryList");
+          list.innerHTML =
+            "<h3 class='text-lg font-semibold mb-3'>📋 Danh sách danh mục</h3>" +
+            categories
+              .map(
+                (c) =>
+                  `<div class="flex items-center gap-4 border p-3 mb-2 rounded bg-gray-50">
+                    <div>
+                      ${
+                        c.image
+                          ? `<img src="${c.image}" alt="${c.name}" class="w-20 h-20 object-cover rounded border" />`
+                          : `<div class="w-20 h-20 bg-gray-200 flex items-center justify-center rounded">🚫</div>`
+                      }
+                    </div>
+                    <div>
+                      <p><strong>ID:</strong> ${c._id}</p>
+                      <p><strong>Tên:</strong> ${c.name}</p>
+                      <p><strong>Mô tả:</strong> ${c.description || ""}</p>
+                    </div>
+                  </div>`
+              )
+              .join("");
+        } catch {
+          document.getElementById("categoryList").innerHTML =
+            "<p class='text-red-600'>⚠️ Không thể tải danh mục!</p>";
+        }
+      }
+
+      window.onload = loadCategories;
+    </script>
+  </body>
+</html>
