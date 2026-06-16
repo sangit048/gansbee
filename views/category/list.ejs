@@ -94,7 +94,7 @@
     </div>
 
     <script>
-      const api = "http://localhost:3000/api/categories";
+      const api = "https://gansbee.onrender.com/api/categories";
 
       // preview ảnh khi chọn file
       function previewAdd() {
@@ -102,7 +102,7 @@
         const preview = document.getElementById("previewAddImg");
         preview.innerHTML = file
           ? `<img src="${URL.createObjectURL(
-              file
+              file,
             )}" class="w-32 h-32 object-cover rounded border" />`
           : "";
       }
@@ -112,7 +112,7 @@
         const preview = document.getElementById("previewEditImg");
         preview.innerHTML = file
           ? `<img src="${URL.createObjectURL(
-              file
+              file,
             )}" class="w-32 h-32 object-cover rounded border" />`
           : "";
       }
@@ -222,7 +222,7 @@
                       <p><strong>Tên:</strong> ${c.name}</p>
                       <p><strong>Mô tả:</strong> ${c.description || ""}</p>
                     </div>
-                  </div>`
+                  </div>`,
               )
               .join("");
         } catch {
