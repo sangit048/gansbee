@@ -499,39 +499,73 @@
 
 // module.exports = router;
 const express = require("express");
-const Product = require("../models/Product");
-const Category = require("../models/Category");
-const ProductVariant = require("../models/ProductVariant");
+const mongoose = require("mongoose");
 const multer = require("multer");
+const { Readable } = require("stream");
+const { getBucket } = require("../config/gridfs");
+const Product = require("../models/Product");
+const ProductVariant = require("../models/ProductVariant");
 
 const router = express.Router();
 
-// 👉 Dùng memoryStorage để lấy buffer, sau đó convert sang base64
-const storage = multer.memoryStorage();
+// Dùng memoryStorage, tự upload vào GridFS
 const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB mỗi ảnh
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// Helper: chuyển buffer sang base64 data URI
-function bufferToBase64(file) {
-  return `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+// Helper: upload 1 file vào GridFS, trả về filename
+function uploadToGridFS(file) {
+  return new Promise((resolve, reject) => {
+    const bucket = getBucket();
+    const readableStream = Readable.from(file.buffer);
+
+    const uploadStream = bucket.openUploadStream(file.originalname, {
+      contentType: file.mimetype,
+    });
+
+    readableStream.pipe(uploadStream);
+
+    uploadStream.on("finish", () => resolve(file.originalname));
+    uploadStream.on("error", reject);
+  });
 }
 
 // ─────────────────────────────────────────────
-// GET /products — Lấy tất cả sản phẩm kèm variants
+// GET /products/images/:filename — Trả ảnh ra FE
+// ─────────────────────────────────────────────
+router.get("/images/:filename", async (req, res) => {
+  try {
+    const bucket = getBucket();
+    const files = await bucket
+      .find({ filename: req.params.filename })
+      .toArray();
+
+    if (!files || files.length === 0)
+      return res.status(404).json({ error: "Không tìm thấy ảnh" });
+
+    res.set("Content-Type", files[0].contentType || "image/jpeg");
+    bucket.openDownloadStreamByName(req.params.filename).pipe(res);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET / — Lấy tất cả sản phẩm
 // ─────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
+    const BASE_URL = `${req.protocol}://${req.get("host")}`;
     const products = await Product.find().populate("category").lean();
 
     const productsWithVariants = await Promise.all(
       products.map(async (p) => {
         const variants = await ProductVariant.find({ product: p._id }).lean();
-        return {
-          ...p,
-          variants,
-        };
+        const images = (p.images || []).map(
+          (filename) => `${BASE_URL}/products/images/${filename}`,
+        );
+        return { ...p, images, variants };
       }),
     );
 
@@ -541,20 +575,19 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// GET /products/all — Alias lấy tất cả (đặt TRƯỚC /:id để không bị conflict)
-// ─────────────────────────────────────────────
+// GET /all
 router.get("/all", async (req, res) => {
   try {
+    const BASE_URL = `${req.protocol}://${req.get("host")}`;
     const products = await Product.find().populate("category").lean();
 
     const productsWithVariants = await Promise.all(
       products.map(async (p) => {
         const variants = await ProductVariant.find({ product: p._id }).lean();
-        return {
-          ...p,
-          variants,
-        };
+        const images = (p.images || []).map(
+          (filename) => `${BASE_URL}/products/images/${filename}`,
+        );
+        return { ...p, images, variants };
       }),
     );
 
@@ -564,11 +597,10 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// GET /products/:id — Lấy chi tiết 1 sản phẩm kèm variants
-// ─────────────────────────────────────────────
+// GET /:id
 router.get("/:id", async (req, res) => {
   try {
+    const BASE_URL = `${req.protocol}://${req.get("host")}`;
     const product = await Product.findById(req.params.id)
       .populate("category")
       .lean();
@@ -577,35 +609,34 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
 
     const variants = await ProductVariant.find({ product: product._id }).lean();
+    const images = (product.images || []).map(
+      (filename) => `${BASE_URL}/products/images/${filename}`,
+    );
 
-    res.json({ ...product, variants });
+    res.json({ ...product, images, variants });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // ─────────────────────────────────────────────
-// POST /products — Thêm sản phẩm mới (ảnh lưu base64)
+// POST / — Thêm sản phẩm
 // ─────────────────────────────────────────────
 router.post("/", upload.array("images", 5), async (req, res) => {
   try {
     const { name, description, category } = req.body;
 
-    if (!name) {
+    if (!name)
       return res.status(400).json({ error: "Tên sản phẩm là bắt buộc" });
-    }
 
-    // Chuyển file upload sang base64 data URI
-    const images = req.files ? req.files.map((f) => bufferToBase64(f)) : [];
+    // Upload từng file vào GridFS
+    const images = req.files
+      ? await Promise.all(req.files.map((f) => uploadToGridFS(f)))
+      : [];
 
-    const product = new Product({
-      name,
-      description,
-      category,
-      images,
-    });
-
+    const product = new Product({ name, description, category, images });
     await product.save();
+
     res.status(201).json(product);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -613,17 +644,17 @@ router.post("/", upload.array("images", 5), async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// PUT /products/:id — Sửa sản phẩm (ảnh lưu base64 nếu có upload mới)
+// PUT /:id — Sửa sản phẩm
 // ─────────────────────────────────────────────
 router.put("/:id", upload.array("images", 5), async (req, res) => {
   try {
     const { name, description, category } = req.body;
-
     const updateData = { name, description, category };
 
-    // Chỉ cập nhật ảnh nếu có file mới được upload
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map((f) => bufferToBase64(f));
+      updateData.images = await Promise.all(
+        req.files.map((f) => uploadToGridFS(f)),
+      );
     }
 
     const product = await Product.findByIdAndUpdate(req.params.id, updateData, {
@@ -640,7 +671,7 @@ router.put("/:id", upload.array("images", 5), async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// DELETE /products/:id — Xóa sản phẩm và toàn bộ variants
+// DELETE /:id — Xóa sản phẩm + variants + ảnh GridFS
 // ─────────────────────────────────────────────
 router.delete("/:id", async (req, res) => {
   try {
@@ -649,7 +680,15 @@ router.delete("/:id", async (req, res) => {
     if (!product)
       return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
 
-    // Xóa luôn tất cả variants liên quan
+    // Xóa ảnh khỏi GridFS
+    const bucket = getBucket();
+    for (const filename of product.images || []) {
+      const files = await bucket.find({ filename }).toArray();
+      for (const file of files) {
+        await bucket.delete(file._id);
+      }
+    }
+
     await ProductVariant.deleteMany({ product: product._id });
 
     res.json({ message: "Xóa sản phẩm và các variants thành công", product });

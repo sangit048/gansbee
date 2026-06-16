@@ -11,7 +11,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const methodOverride = require("method-override");
-
+require("./config/gridfs"); // ← thêm dòng này sau khi connect MongoDB
 // ===== Load env =====
 dotenv.config();
 const app = express();
