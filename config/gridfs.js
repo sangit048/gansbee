@@ -10,6 +10,10 @@ mongoose.connection.once("open", () => {
   console.log("✅ GridFS bucket ready");
 });
 
-const getBucket = () => bucket;
+const getBucket = () => {
+  if (!bucket)
+    throw new Error("GridFS chưa được khởi tạo, MongoDB chưa connect");
+  return bucket;
+};
 
 module.exports = { getBucket };
