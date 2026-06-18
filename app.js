@@ -1,3 +1,261 @@
+// const express = require("express");
+// const mongoose = require("mongoose");
+// const dotenv = require("dotenv");
+// const morgan = require("morgan");
+// const cors = require("cors");
+// const expressLayouts = require("express-ejs-layouts");
+// const session = require("express-session");
+// const MongoStore = require("connect-mongo");
+// const cookieParser = require("cookie-parser");
+// const multer = require("multer");
+// const fs = require("fs");
+// const path = require("path");
+// const methodOverride = require("method-override");
+// require("./config/gridfs"); // ← thêm dòng này sau khi connect MongoDB
+// // ===== Load env =====
+// dotenv.config();
+// const app = express();
+
+// // ===== Middleware =====
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+// // app.use(cors());
+// // app.use(
+// //   cors({
+// //     origin: "http://localhost:3001", // FE domain/port
+// //     credentials: true,
+// //   }),
+// // );
+// app.use(
+//   cors({
+//     origin: [
+//       "http://localhost:3000",
+//       "http://localhost:3001",
+//       "https://gansbee.onrender.com",
+//     ],
+//     credentials: true,
+//   }),
+// );
+// app.use(morgan("dev"));
+// app.use(cookieParser());
+// app.use(express.static("public"));
+// app.use(methodOverride("_method"));
+// // ===== Multer config (upload ảnh sản phẩm) =====
+// const imageDir = path.join(__dirname, "public/images");
+// if (!fs.existsSync(imageDir)) {
+//   fs.mkdirSync(imageDir, { recursive: true });
+// }
+
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => cb(null, imageDir),
+//   filename: (req, file, cb) =>
+//     cb(
+//       null,
+//       Date.now() +
+//         "-" +
+//         Math.round(Math.random() * 1e9) +
+//         path.extname(file.originalname),
+//     ),
+// });
+// const upload = multer({ storage });
+
+// // ===== Session (MongoStore) =====
+// app.use(
+//   session({
+//     secret: process.env.SESSION_SECRET || "supersecret",
+//     resave: false,
+//     saveUninitialized: false,
+//     store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+//     cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 ngày
+//   }),
+// );
+
+// // ===== View engine (EJS + Layouts) =====
+// app.set("view engine", "ejs");
+// app.use(expressLayouts);
+// app.set("layout", "layout");
+
+// // ===== MongoDB connection =====
+// mongoose
+//   .connect(process.env.MONGO_URI)
+//   .then(() => console.log("✅ MongoDB Connected"))
+//   .catch((err) => console.log("❌ DB Error:", err));
+
+// // ===== Import Routes =====
+// const authRoutes = require("./routes/auth");
+// const productRoutes = require("./routes/products");
+// const orderRoutes = require("./routes/orders");
+// const voucherRoutes = require("./routes/vouchers");
+// const reviewRoutes = require("./routes/reviews");
+// const categoryRoutes = require("./routes/category");
+// const productVariantRoutes = require("./routes/productVariants"); // <-- thêm dòng này
+// const addressRoutes = require("./routes/address");
+// const cartRoutes = require("./routes/cart");
+
+// // ===== Models =====
+// const Product = require("./models/Product");
+// const Order = require("./models/Order");
+// const Voucher = require("./models/Voucher");
+// const Review = require("./models/Review");
+// const Category = require("./models/Category");
+// const ProductVariant = require("./models/ProductVariant");
+
+// // ===== Middleware check login =====
+// const { checkLogin } = require("./middlewares/auth");
+
+// // ===== API routes (/api/...) =====
+// app.use("/api/auth", authRoutes);
+// app.use("/api/products", productRoutes);
+// app.use("/api/orders", orderRoutes);
+// app.use("/api/vouchers", voucherRoutes);
+// app.use("/api/reviews", reviewRoutes);
+// app.use("/api/categories", categoryRoutes);
+// app.use("/productVariants", productVariantRoutes);
+// app.use("/api/address", addressRoutes);
+// app.use("/api/cart", cartRoutes);
+
+// // ===== Admin Frontend (views) =====
+// // Root -> dashboard (require login)
+// app.get("/", (req, res) => {
+//   if (!req.session.user) return res.redirect("/login");
+//   res.redirect("/dashboard");
+// });
+
+// app.get("/login", (req, res) =>
+//   res.render("auth/login", { title: "Đăng nhập", user: null }),
+// );
+// app.get("/register", (req, res) =>
+//   res.render("auth/register", { title: "Đăng ký", user: null }),
+// );
+// app.get("/logout", (req, res) => {
+//   req.session.destroy(() => res.redirect("/login"));
+// });
+
+// // Dashboard
+// app.get("/dashboard", checkLogin, async (req, res) => {
+//   const [
+//     productsCount,
+//     ordersCount,
+//     pendingOrdersCount,
+//     vouchersCount,
+//     reviewsCount,
+//   ] = await Promise.all([
+//     Product.countDocuments(),
+//     Order.countDocuments(),
+//     Order.countDocuments({ status: "pending" }),
+//     Voucher.countDocuments(),
+//     Review.countDocuments(),
+//   ]);
+
+//   res.render("dashboard/index", {
+//     title: "Dashboard",
+//     user: req.user, // Sử dụng req.user từ middleware
+//     productsCount,
+//     ordersCount,
+//     pendingOrdersCount,
+//     vouchersCount,
+//     reviewsCount,
+//   });
+// });
+
+// // Products list
+// app.get("/products/view", checkLogin, async (req, res) => {
+//   try {
+//     const [products, categories] = await Promise.all([
+//       Product.find().populate("category"),
+//       Category.find(),
+//     ]);
+//     res.render("products/list", {
+//       title: "Products",
+//       user: req.session.user,
+//       products,
+//       categories,
+//     });
+//   } catch (err) {
+//     console.error("❌ Error fetching products or categories:", err);
+//     res.status(500).send("Có lỗi xảy ra khi tải danh sách sản phẩm");
+//   }
+// });
+// app.get("/products/:id/variants", checkLogin, async (req, res) => {
+//   const product = await Product.findById(req.params.id);
+//   const variants = await ProductVariant.find({ product: req.params.id });
+//   res.render("productVariants/list", {
+//     title: "Quản lý biến thể",
+//     user: req.session.user,
+//     product,
+//     variants,
+//   });
+// });
+// // Products add (form)
+// app.get("/products/add", checkLogin, async (req, res) => {
+//   const categories = await Category.find();
+//   res.render("products/add", {
+//     title: "Thêm sản phẩm",
+//     user: req.session.user,
+//     categories,
+//   });
+// });
+
+// // Products add (POST) – cho phép nhiều ảnh
+// // app.post(
+// //   "/products/add",
+// //   checkLogin,
+// //   upload.array("images", 5),
+// //   async (req, res) => {
+// //     try {
+// //       const { name, price, discountPrice, category } = req.body;
+// //       if (!name || !price) {
+// //         return res.status(400).send("Tên và giá sản phẩm là bắt buộc");
+// //       }
+
+// //       const imagePaths = req.files
+// //         ? req.files.map((f) => "/images/" + f.filename)
+// //         : [];
+
+// //       await Product.create({
+// //         name,
+// //         price,
+// //         discountPrice,
+// //         category,
+// //         images: imagePaths,
+// //       });
+
+// //       res.redirect("/products/view");
+// //     } catch (err) {
+// //       console.error("❌ Add Product Error:", err);
+// //       res.status(500).send("Có lỗi xảy ra khi thêm sản phẩm");
+// //     }
+// //   }
+// // );
+// app.post(
+//   "/products/add",
+//   checkLogin,
+//   upload.array("images", 5),
+//   async (req, res) => {
+//     try {
+//       const { name, description, category } = req.body;
+//       if (!name) {
+//         return res.status(400).send("Tên sản phẩm là bắt buộc");
+//       }
+
+//       const imagePaths = req.files
+//         ? req.files.map((f) => "/images/" + f.filename)
+//         : [];
+
+//       await Product.create({
+//         name,
+//         description,
+//         category,
+//         images: imagePaths,
+//       });
+
+//       res.redirect("/products/view");
+//     } catch (err) {
+//       console.error("❌ Add Product Error:", err);
+//       res.status(500).send("Có lỗi xảy ra khi thêm sản phẩm");
+//     }
+//   },
+// );
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
@@ -8,24 +266,16 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
-const fs = require("fs");
+const { Readable } = require("stream");
 const path = require("path");
 const methodOverride = require("method-override");
-require("./config/gridfs"); // ← thêm dòng này sau khi connect MongoDB
-// ===== Load env =====
+
 dotenv.config();
 const app = express();
 
 // ===== Middleware =====
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// app.use(cors());
-// app.use(
-//   cors({
-//     origin: "http://localhost:3001", // FE domain/port
-//     credentials: true,
-//   }),
-// );
 app.use(
   cors({
     origin: [
@@ -40,57 +290,22 @@ app.use(morgan("dev"));
 app.use(cookieParser());
 app.use(express.static("public"));
 app.use(methodOverride("_method"));
-// ===== Multer config (upload ảnh sản phẩm) =====
-const imageDir = path.join(__dirname, "public/images");
-if (!fs.existsSync(imageDir)) {
-  fs.mkdirSync(imageDir, { recursive: true });
-}
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, imageDir),
-  filename: (req, file, cb) =>
-    cb(
-      null,
-      Date.now() +
-        "-" +
-        Math.round(Math.random() * 1e9) +
-        path.extname(file.originalname),
-    ),
-});
-const upload = multer({ storage });
-
-// ===== Session (MongoStore) =====
+// ===== Session =====
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "supersecret",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
-    cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 ngày
+    cookie: { maxAge: 1000 * 60 * 60 * 24 },
   }),
 );
 
-// ===== View engine (EJS + Layouts) =====
+// ===== View engine =====
 app.set("view engine", "ejs");
 app.use(expressLayouts);
 app.set("layout", "layout");
-
-// ===== MongoDB connection =====
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.log("❌ DB Error:", err));
-
-// ===== Import Routes =====
-const authRoutes = require("./routes/auth");
-const productRoutes = require("./routes/products");
-const orderRoutes = require("./routes/orders");
-const voucherRoutes = require("./routes/vouchers");
-const reviewRoutes = require("./routes/reviews");
-const categoryRoutes = require("./routes/category");
-const productVariantRoutes = require("./routes/productVariants"); // <-- thêm dòng này
-const addressRoutes = require("./routes/address");
-const cartRoutes = require("./routes/cart");
 
 // ===== Models =====
 const Product = require("./models/Product");
@@ -103,7 +318,31 @@ const ProductVariant = require("./models/ProductVariant");
 // ===== Middleware check login =====
 const { checkLogin } = require("./middlewares/auth");
 
-// ===== API routes (/api/...) =====
+// ===== MongoDB connect → KHỞI TẠO GRIDFS TRONG .then() =====
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB Connected");
+    // Khởi tạo GridFS SAU KHI connect xong
+    require("./config/gridfs");
+  })
+  .catch((err) => console.log("❌ DB Error:", err));
+
+// ===== Multer memoryStorage cho admin form =====
+const upload = multer({ storage: multer.memoryStorage() });
+
+// ===== Import Routes =====
+const authRoutes = require("./routes/auth");
+const productRoutes = require("./routes/products");
+const orderRoutes = require("./routes/orders");
+const voucherRoutes = require("./routes/vouchers");
+const reviewRoutes = require("./routes/reviews");
+const categoryRoutes = require("./routes/category");
+const productVariantRoutes = require("./routes/productVariants");
+const addressRoutes = require("./routes/address");
+const cartRoutes = require("./routes/cart");
+
+// ===== API routes =====
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
@@ -114,8 +353,7 @@ app.use("/productVariants", productVariantRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/cart", cartRoutes);
 
-// ===== Admin Frontend (views) =====
-// Root -> dashboard (require login)
+// ===== Admin Frontend =====
 app.get("/", (req, res) => {
   if (!req.session.user) return res.redirect("/login");
   res.redirect("/dashboard");
@@ -131,7 +369,6 @@ app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
-// Dashboard
 app.get("/dashboard", checkLogin, async (req, res) => {
   const [
     productsCount,
@@ -146,10 +383,9 @@ app.get("/dashboard", checkLogin, async (req, res) => {
     Voucher.countDocuments(),
     Review.countDocuments(),
   ]);
-
   res.render("dashboard/index", {
     title: "Dashboard",
-    user: req.user, // Sử dụng req.user từ middleware
+    user: req.user,
     productsCount,
     ordersCount,
     pendingOrdersCount,
@@ -158,7 +394,6 @@ app.get("/dashboard", checkLogin, async (req, res) => {
   });
 });
 
-// Products list
 app.get("/products/view", checkLogin, async (req, res) => {
   try {
     const [products, categories] = await Promise.all([
@@ -172,10 +407,10 @@ app.get("/products/view", checkLogin, async (req, res) => {
       categories,
     });
   } catch (err) {
-    console.error("❌ Error fetching products or categories:", err);
     res.status(500).send("Có lỗi xảy ra khi tải danh sách sản phẩm");
   }
 });
+
 app.get("/products/:id/variants", checkLogin, async (req, res) => {
   const product = await Product.findById(req.params.id);
   const variants = await ProductVariant.find({ product: req.params.id });
@@ -186,7 +421,7 @@ app.get("/products/:id/variants", checkLogin, async (req, res) => {
     variants,
   });
 });
-// Products add (form)
+
 app.get("/products/add", checkLogin, async (req, res) => {
   const categories = await Category.find();
   res.render("products/add", {
@@ -196,37 +431,7 @@ app.get("/products/add", checkLogin, async (req, res) => {
   });
 });
 
-// Products add (POST) – cho phép nhiều ảnh
-// app.post(
-//   "/products/add",
-//   checkLogin,
-//   upload.array("images", 5),
-//   async (req, res) => {
-//     try {
-//       const { name, price, discountPrice, category } = req.body;
-//       if (!name || !price) {
-//         return res.status(400).send("Tên và giá sản phẩm là bắt buộc");
-//       }
-
-//       const imagePaths = req.files
-//         ? req.files.map((f) => "/images/" + f.filename)
-//         : [];
-
-//       await Product.create({
-//         name,
-//         price,
-//         discountPrice,
-//         category,
-//         images: imagePaths,
-//       });
-
-//       res.redirect("/products/view");
-//     } catch (err) {
-//       console.error("❌ Add Product Error:", err);
-//       res.status(500).send("Có lỗi xảy ra khi thêm sản phẩm");
-//     }
-//   }
-// );
+// ✅ Admin form thêm sản phẩm — dùng GridFS
 app.post(
   "/products/add",
   checkLogin,
@@ -234,21 +439,27 @@ app.post(
   async (req, res) => {
     try {
       const { name, description, category } = req.body;
-      if (!name) {
-        return res.status(400).send("Tên sản phẩm là bắt buộc");
-      }
+      if (!name) return res.status(400).send("Tên sản phẩm là bắt buộc");
 
-      const imagePaths = req.files
-        ? req.files.map((f) => "/images/" + f.filename)
-        : [];
+      const { getBucket } = require("./config/gridfs");
+      const bucket = getBucket();
 
-      await Product.create({
-        name,
-        description,
-        category,
-        images: imagePaths,
-      });
+      const images = await Promise.all(
+        (req.files || []).map((file) => {
+          return new Promise((resolve, reject) => {
+            const uniqueFilename = `${Date.now()}-${path.basename(file.originalname)}`;
+            const readableStream = Readable.from(file.buffer);
+            const uploadStream = bucket.openUploadStream(uniqueFilename, {
+              contentType: file.mimetype,
+            });
+            readableStream.pipe(uploadStream);
+            uploadStream.on("finish", () => resolve(uniqueFilename));
+            uploadStream.on("error", reject);
+          });
+        }),
+      );
 
+      await Product.create({ name, description, category, images });
       res.redirect("/products/view");
     } catch (err) {
       console.error("❌ Add Product Error:", err);
@@ -256,6 +467,7 @@ app.post(
     }
   },
 );
+
 // Orders list (updated)
 app.get("/orders", checkLogin, async (req, res) => {
   try {
