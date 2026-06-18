@@ -14,13 +14,24 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// Helper: tạo unique filename, upload vào GridFS, trả về tên file thuần
+// Helper: build BASE_URL đúng (https + /api)
+function getBaseUrl(req) {
+  const protocol =
+    process.env.NODE_ENV === "production" ? "https" : req.protocol;
+  return `${protocol}://${req.get("host")}/api`;
+}
+
+// Helper: normalize filename, build image URL
+function buildImageUrl(baseUrl, filename) {
+  const cleanName = filename.replace(/^\/?(images\/)?/, "");
+  return `${baseUrl}/products/images/${cleanName}`;
+}
+
+// Helper: upload 1 file vào GridFS, trả về filename thuần
 function uploadToGridFS(file) {
   return new Promise((resolve, reject) => {
     const bucket = getBucket();
     const readableStream = Readable.from(file.buffer);
-
-    // Unique filename để tránh trùng
     const uniqueFilename = `${Date.now()}-${path.basename(file.originalname)}`;
 
     const uploadStream = bucket.openUploadStream(uniqueFilename, {
@@ -28,21 +39,13 @@ function uploadToGridFS(file) {
     });
 
     readableStream.pipe(uploadStream);
-
-    uploadStream.on("finish", () => resolve(uniqueFilename)); // ✅ chỉ lưu tên file
+    uploadStream.on("finish", () => resolve(uniqueFilename));
     uploadStream.on("error", reject);
   });
 }
 
-// Helper: build image URL sạch
-function buildImageUrl(baseUrl, filename) {
-  // Normalize: bỏ prefix thừa nếu data cũ lưu "/images/..." hoặc "images/..."
-  const cleanName = filename.replace(/^\/?(images\/)?/, "");
-  return `${baseUrl}/products/images/${cleanName}`;
-}
-
 // ─────────────────────────────────────────────
-// GET /products/images/:filename — Trả ảnh ra FE
+// GET /images/:filename — Trả ảnh ra FE
 // ─────────────────────────────────────────────
 router.get("/images/:filename", async (req, res) => {
   try {
@@ -62,8 +65,7 @@ router.get("/images/:filename", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// GET /debug-images — Liệt kê tất cả file trong GridFS
-// PHẢI đặt trước /:id
+// GET /debug-images — Kiểm tra GridFS (đặt trước /:id)
 // ─────────────────────────────────────────────
 router.get("/debug-images", async (req, res) => {
   try {
@@ -80,7 +82,7 @@ router.get("/debug-images", async (req, res) => {
 // ─────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    const BASE_URL = `${req.protocol}://${req.get("host")}`;
+    const BASE_URL = getBaseUrl(req);
     const products = await Product.find().populate("category").lean();
 
     const productsWithVariants = await Promise.all(
@@ -104,7 +106,7 @@ router.get("/", async (req, res) => {
 // ─────────────────────────────────────────────
 router.get("/all", async (req, res) => {
   try {
-    const BASE_URL = `${req.protocol}://${req.get("host")}`;
+    const BASE_URL = getBaseUrl(req);
     const products = await Product.find().populate("category").lean();
 
     const productsWithVariants = await Promise.all(
@@ -124,11 +126,11 @@ router.get("/all", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// GET /:id — PHẢI đặt sau tất cả route tĩnh
+// GET /:id — đặt SAU tất cả route tĩnh
 // ─────────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   try {
-    const BASE_URL = `${req.protocol}://${req.get("host")}`;
+    const BASE_URL = getBaseUrl(req);
     const product = await Product.findById(req.params.id)
       .populate("category")
       .lean();
@@ -179,7 +181,7 @@ router.put("/:id", upload.array("images", 5), async (req, res) => {
     const updateData = { name, description, category };
 
     if (req.files && req.files.length > 0) {
-      // Xóa ảnh cũ trước
+      // Xóa ảnh cũ khỏi GridFS
       const oldProduct = await Product.findById(req.params.id);
       if (oldProduct) {
         const bucket = getBucket();
