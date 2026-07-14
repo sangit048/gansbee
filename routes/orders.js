@@ -267,6 +267,7 @@ const Address = require("../models/Address");
 const Payment = require("../models/Payment");
 const Shipping = require("../models/Shipping");
 const { checkLogin } = require("../middlewares/auth");
+const { sendOrderEmails } = require("../utils/mailer");
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -450,6 +451,11 @@ router.post("/", checkLogin, async (req, res) => {
       .populate("payment")
       .populate("shipping");
 
+    // Gửi email xác nhận đơn hàng (khách hàng + admin), không chặn response nếu lỗi
+    sendOrderEmails(populatedOrder).catch((e) =>
+      console.error("Gửi email thất bại:", e),
+    );
+
     res.status(201).json(populatedOrder);
   } catch (err) {
     console.error("Lỗi tạo đơn hàng:", err);
@@ -459,7 +465,7 @@ router.post("/", checkLogin, async (req, res) => {
   }
 });
 
-// PUT update order status (giữ nguyên)
+// PUT update order status (giữ nguyên - dùng cho admin)
 router.put("/:id", checkLogin, async (req, res) => {
   try {
     const { status } = req.body;
@@ -504,7 +510,46 @@ router.put("/:id", checkLogin, async (req, res) => {
   }
 });
 
-// DELETE order (giữ nguyên)
+// ─────────────────────────────────────────────
+// PATCH /:id/cancel — Khách hàng tự hủy đơn của mình
+// ─────────────────────────────────────────────
+router.patch("/:id/cancel", checkLogin, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+    }
+
+    const cancellableStatuses = ["pending", "paid"];
+    if (!cancellableStatuses.includes(order.status)) {
+      return res.status(400).json({
+        error: "Đơn hàng đã được xử lý, không thể hủy",
+      });
+    }
+
+    order.status = "cancelled";
+    await order.save();
+
+    const updatedOrder = await Order.findById(order._id)
+      .populate("user")
+      .populate("products.product")
+      .populate("products.variant")
+      .populate("voucher")
+      .populate("shippingAddress")
+      .populate("payment")
+      .populate("shipping");
+
+    res.status(200).json(updatedOrder);
+  } catch (err) {
+    res.status(500).json({ error: "Có lỗi xảy ra khi hủy đơn hàng" });
+  }
+});
+
+// DELETE order (chỉ dành cho admin - không kiểm tra chủ sở hữu)
 router.delete("/:id", checkLogin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
