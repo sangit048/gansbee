@@ -1,80 +1,77 @@
-<!-- filepath: d:\GNASWWWBE\gnaswwwbe\views\orders\list.ejs -->
-<h3>Danh sách đơn hàng</h3>
-<table class="table table-hover table-bordered">
-  <thead class="table-dark">
-    <tr>
-      <th>Mã đơn</th>
-      <th>User</th>
-      <th>Sản phẩm</th>
-      <th>Tổng tiền</th>
-      <th>Trạng thái</th>
-      <th>Hành động</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% orders.forEach(o => { %>
-    <tr>
-      <td><%= o._id %></td>
-      <td><%= o.user?.email %></td>
-      <td>
-        <% o.products.forEach(pr => { %>
-        <span><%= pr.product?.name %> (x<%= pr.quantity %>)</span><br />
+<style>
+  .orders-wrap { padding: 24px; }
+  .orders-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .orders-header h1 { font-size: 22px; font-weight: 700; margin: 0; }
+  .orders-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .orders-table th, .orders-table td { padding: 12px 16px; text-align: left; font-size: 14px; }
+  .orders-table thead th { background: #f8f9fb; color: #555; font-weight: 600; border-bottom: 1px solid #eee; }
+  .orders-table tbody tr { border-bottom: 1px solid #f0f0f0; }
+  .orders-table tbody tr:last-child { border-bottom: none; }
+  .orders-table tbody tr:hover { background: #fafbfc; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .badge-pending { background: #fff4e5; color: #b8720b; }
+  .badge-paid { background: #e6f0ff; color: #1a56c4; }
+  .badge-shipped { background: #eaf0ff; color: #3d4ed8; }
+  .badge-completed { background: #e6f8ec; color: #17803d; }
+  .badge-cancelled { background: #fdeaea; color: #c62828; }
+  .btn-view { display: inline-block; padding: 6px 14px; border-radius: 6px; background: #111827; color: #fff; font-size: 13px; text-decoration: none; }
+  .btn-view:hover { background: #1f2937; color: #fff; }
+  .empty-state { text-align: center; padding: 60px 0; color: #888; }
+  .cust-name { font-weight: 600; }
+  .cust-email { color: #888; font-size: 12px; }
+</style>
+
+<div class="orders-wrap">
+  <div class="orders-header">
+    <h1>Danh sách đơn hàng</h1>
+  </div>
+
+  <% if (!orders || orders.length === 0) { %>
+    <div class="empty-state">Chưa có đơn hàng nào.</div>
+  <% } else { %>
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Mã đơn</th>
+          <th>Khách hàng</th>
+          <th>Tổng tiền</th>
+          <th>Thanh toán</th>
+          <th>Trạng thái</th>
+          <th>Ngày tạo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% orders.forEach(order => { %>
+          <tr>
+            <td>#<%= String(order._id).slice(-8) %></td>
+            <td>
+              <div class="cust-name"><%= order.user?.name || order.user?.fullName || "—" %></div>
+              <div class="cust-email"><%= order.user?.email || "" %></div>
+            </td>
+            <td><%= Number(order.totalPrice || 0).toLocaleString("vi-VN") %>₫</td>
+            <td>
+              <%= order.paymentMethod === "cash" ? "COD" : "Chuyển khoản" %>
+            </td>
+            <td>
+              <span class="badge badge-<%= order.status %>">
+                <%
+                  const statusLabels = {
+                    pending: "Chờ xử lý",
+                    paid: "Đã thanh toán",
+                    shipped: "Đang giao",
+                    completed: "Hoàn tất",
+                    cancelled: "Đã hủy",
+                  };
+                %>
+                <%= statusLabels[order.status] || order.status %>
+              </span>
+            </td>
+            <td><%= new Date(order.createdAt).toLocaleDateString("vi-VN") %></td>
+            <td><a class="btn-view" href="/orders/<%= order._id %>">Xem</a></td>
+          </tr>
         <% }) %>
-      </td>
-      <td><%= o.totalPrice %></td>
-      <td><%= o.status %></td>
-      <td>
-        <a href="/orders/<%= o._id %>" class="btn btn-info btn-sm"
-          >Xem chi tiết</a
-        >
-        <% if (o.status === 'pending') { %>
-        <form
-          action="/orders/<%= o._id %>/approve"
-          method="POST"
-          style="display: inline"
-        >
-          <button type="submit" class="btn btn-success btn-sm">Duyệt</button>
-        </form>
-        <% } %> <% if (o.status === 'approved') { %>
-        <form
-          action="/orders/<%= o._id %>/paid"
-          method="POST"
-          style="display: inline"
-        >
-          <button type="submit" class="btn btn-primary btn-sm">
-            Xác nhận đã thanh toán
-          </button>
-        </form>
-        <% } %> <% if (o.status === 'paid') { %>
-        <form
-          action="/orders/<%= o._id %>/shipped"
-          method="POST"
-          style="display: inline"
-        >
-          <button type="submit" class="btn btn-warning btn-sm">
-            Giao hàng
-          </button>
-        </form>
-        <% } %> <% if (o.status === 'delivered') { %>
-        <form
-          action="/orders/<%= o._id %>/completed"
-          method="POST"
-          style="display: inline"
-        >
-          <button type="submit" class="btn btn-success btn-sm">Hoàn tất</button>
-        </form>
-        <% } %> <% if (o.status !== 'cancelled' && o.status !== 'completed') {
-        %>
-        <form
-          action="/orders/<%= o._id %>/cancel"
-          method="POST"
-          style="display: inline"
-        >
-          <button type="submit" class="btn btn-danger btn-sm">Hủy</button>
-        </form>
-        <% } %>
-      </td>
-    </tr>
-    <% }) %>
-  </tbody>
-</table>
+      </tbody>
+    </table>
+  <% } %>
+</div>
