@@ -24,7 +24,7 @@ app.use(
       "http://localhost:3000",
       "http://localhost:3001",
       "https://gansbee.onrender.com",
-      "https://gnas-iota.vercel.app",
+      "https://sandclub.vercel.app",
     ],
     credentials: true,
   }),
