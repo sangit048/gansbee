@@ -1,12 +1,13 @@
-// const nodemailer = require("nodemailer");
+// const { Resend } = require("resend");
 
-// const transporter = nodemailer.createTransport({
-//   service: "gmail",
-//   auth: {
-//     user: process.env.MAIL_USER,
-//     pass: process.env.MAIL_PASS,
-//   },
-// });
+// const resend = new Resend(process.env.RESEND_API_KEY);
+
+// // Địa chỉ gửi đi. Nếu chưa verify domain riêng trên Resend,
+// // bắt buộc phải dùng địa chỉ mặc định này (onboarding@resend.dev).
+// // Sau khi verify domain riêng (vd: yourdomain.com), đổi thành
+// // "Cửa hàng <no-reply@yourdomain.com>"
+// const FROM_ADDRESS =
+//   process.env.MAIL_FROM || "Cửa hàng <onboarding@resend.dev>";
 
 // function formatCurrency(n) {
 //   return new Intl.NumberFormat("vi-VN", {
@@ -63,8 +64,8 @@
 
 //   if (customerEmail) {
 //     sendPromises.push(
-//       transporter.sendMail({
-//         from: `"Cửa hàng" <${process.env.MAIL_USER}>`,
+//       resend.emails.send({
+//         from: FROM_ADDRESS,
 //         to: customerEmail,
 //         subject: `Xác nhận đơn hàng #${order._id}`,
 //         html,
@@ -74,8 +75,8 @@
 
 //   if (process.env.ADMIN_EMAIL) {
 //     sendPromises.push(
-//       transporter.sendMail({
-//         from: `"Hệ thống đơn hàng" <${process.env.MAIL_USER}>`,
+//       resend.emails.send({
+//         from: FROM_ADDRESS,
 //         to: process.env.ADMIN_EMAIL,
 //         subject: `[Đơn hàng mới] #${order._id}`,
 //         html,
@@ -84,8 +85,15 @@
 //   }
 
 //   try {
-//     await Promise.all(sendPromises);
-//     console.log("Đã gửi email đơn hàng thành công cho:", order._id);
+//     const results = await Promise.allSettled(sendPromises);
+//     results.forEach((r, i) => {
+//       if (r.status === "rejected") {
+//         console.error(`Gửi email #${i} thất bại:`, r.reason);
+//       } else if (r.value?.error) {
+//         console.error(`Gửi email #${i} bị Resend từ chối:`, r.value.error);
+//       }
+//     });
+//     console.log("Đã xử lý gửi email đơn hàng cho:", order._id);
 //   } catch (err) {
 //     console.error("Lỗi gửi email đơn hàng:", err);
 //   }
@@ -102,6 +110,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // "Cửa hàng <no-reply@yourdomain.com>"
 const FROM_ADDRESS =
   process.env.MAIL_FROM || "Cửa hàng <onboarding@resend.dev>";
+
+// ⚠️ TẠM THỜI để test - vì chưa verify domain riêng trên Resend,
+// tài khoản chỉ được gửi email tới đúng địa chỉ đăng ký Resend.
+// Khi có domain riêng và verify xong, xoá dòng này (hoặc set thành null)
+// để email gửi đúng tới khách hàng thật.
+const TEST_EMAIL_OVERRIDE = "sanggamer1042005@gmail.com";
 
 function formatCurrency(n) {
   return new Intl.NumberFormat("vi-VN", {
@@ -152,7 +166,10 @@ function buildOrderHtml(order) {
 
 async function sendOrderEmails(order) {
   const html = buildOrderHtml(order);
-  const customerEmail = order.user?.email;
+
+  // Nếu đang ở chế độ test (chưa verify domain), luôn gửi về TEST_EMAIL_OVERRIDE
+  // thay vì email khách hàng thật, để tránh bị Resend từ chối (lỗi 403).
+  const customerEmail = TEST_EMAIL_OVERRIDE || order.user?.email;
 
   const sendPromises = [];
 
@@ -171,7 +188,9 @@ async function sendOrderEmails(order) {
     sendPromises.push(
       resend.emails.send({
         from: FROM_ADDRESS,
-        to: process.env.ADMIN_EMAIL,
+        // Admin email cũng cần override nếu khác với email test,
+        // nếu không sẽ tiếp tục bị Resend từ chối.
+        to: TEST_EMAIL_OVERRIDE || process.env.ADMIN_EMAIL,
         subject: `[Đơn hàng mới] #${order._id}`,
         html,
       }),
