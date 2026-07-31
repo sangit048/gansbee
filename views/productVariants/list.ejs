@@ -124,8 +124,6 @@
       method="POST"
       enctype="multipart/form-data"
     >
-      <input type="hidden" name="_method" value="PUT" />
-
       <label>Size</label>
       <input type="text" name="size" id="edit_size" required /><br />
 
@@ -156,7 +154,9 @@
 <script>
   function openEditModal(variant) {
     const form = document.getElementById("editForm");
-    form.action = "/productVariants/" + variant._id;
+    // Đưa _method=PUT vào query string (giống nút Xóa) thay vì hidden input,
+    // vì method-override không đọc được _method từ multipart/form-data body
+    form.action = "/productVariants/" + variant._id + "?_method=PUT";
 
     document.getElementById("edit_size").value = variant.size || "";
     document.getElementById("edit_color").value = variant.color || "";
