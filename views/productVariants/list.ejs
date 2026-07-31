@@ -1,4 +1,45 @@
 <h3>Biến thể sản phẩm: <%= product.name %></h3>
+
+<style>
+  .btn {
+    display: inline-block;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-right: 4px;
+  }
+  .btn-edit {
+    background-color: #f0ad4e;
+    color: #fff;
+  }
+  .btn-edit:hover {
+    background-color: #ec971f;
+  }
+  .btn-delete {
+    background-color: #d9534f;
+    color: #fff;
+  }
+  .btn-delete:hover {
+    background-color: #c9302c;
+  }
+  .btn-save {
+    background-color: #5cb85c;
+    color: #fff;
+  }
+  .btn-save:hover {
+    background-color: #449d44;
+  }
+  .btn-cancel {
+    background-color: #6c757d;
+    color: #fff;
+  }
+  .btn-cancel:hover {
+    background-color: #5a6268;
+  }
+</style>
+
 <table border="1" cellpadding="6">
   <thead>
     <tr>
@@ -29,7 +70,8 @@
       <td>
         <button
           type="button"
-          onclick='openEditModal(<%- JSON.stringify({
+          class="btn btn-edit"
+          data-variant='<%- JSON.stringify({
             _id: v._id,
             size: v.size,
             color: v.color,
@@ -37,7 +79,8 @@
             discountPrice: v.discountPrice,
             stock: v.stock,
             image: v.image
-          }) %>)'
+          }) %>'
+          onclick="openEditModal(JSON.parse(this.dataset.variant))"
         >
           Sửa
         </button>
@@ -47,7 +90,9 @@
           action="/productVariants/<%= v._id %>?_method=DELETE"
           style="display: inline"
         >
-          <button type="submit" onclick="return confirm('Xóa?')">Xóa</button>
+          <button type="submit" class="btn btn-delete" onclick="return confirm('Xóa?')">
+            Xóa
+          </button>
         </form>
       </td>
     </tr>
@@ -64,7 +109,7 @@
   <input type="number" name="discountPrice" placeholder="Giá giảm" />
   <input type="number" name="stock" placeholder="Tồn kho" required />
   <input type="file" name="image" accept="image/*" />
-  <button type="submit">Thêm</button>
+  <button type="submit" class="btn btn-save">Thêm</button>
 </form>
 
 <!-- Modal sửa biến thể -->
@@ -102,8 +147,8 @@
       <label>Đổi ảnh (bỏ trống nếu giữ ảnh cũ)</label>
       <input type="file" name="image" accept="image/*" /><br /><br />
 
-      <button type="submit">Lưu</button>
-      <button type="button" onclick="closeEditModal()">Hủy</button>
+      <button type="submit" class="btn btn-save">Lưu</button>
+      <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Hủy</button>
     </form>
   </div>
 </div>
