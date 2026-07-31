@@ -1,28 +1,53 @@
-const express = require("express");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+// const express = require("express");
+// const bcrypt = require("bcrypt");
+// const jwt = require("jsonwebtoken");
+// const User = require("../models/User");
 
-const router = express.Router();
+// const router = express.Router();
 
-// Secret key JWT (đặt trong .env)
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
+// // Secret key JWT (đặt trong .env)
+// const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
 
-// Đăng ký
+// // Đăng ký
+// // router.post("/register", async (req, res) => {
+// //   try {
+// //     const { name, email, password, role = "user" } = req.body;
+// //     const exist = await User.findOne({ email });
+// //     if (exist) return res.status(400).json({ message: "Email đã tồn tại" });
+
+// //     const hashed = await bcrypt.hash(password, 10);
+// //     const user = new User({ name, email, password: hashed, role });
+// //     await user.save();
+
+// //     const token = jwt.sign(
+// //       { id: user._id, name: user.name, email: user.email, role: user.role },
+// //       JWT_SECRET,
+// //       { expiresIn: "1d" }
+// //     );
+
+// //     res.json({
+// //       message: "Đăng ký thành công",
+// //       user: { id: user._id, name, email, role },
+// //       token,
+// //     });
+// //   } catch (err) {
+// //     res.status(500).json({ error: err.message });
+// //   }
+// // });
 // router.post("/register", async (req, res) => {
 //   try {
 //     const { name, email, password, role = "user" } = req.body;
 //     const exist = await User.findOne({ email });
 //     if (exist) return res.status(400).json({ message: "Email đã tồn tại" });
 
-//     const hashed = await bcrypt.hash(password, 10);
-//     const user = new User({ name, email, password: hashed, role });
+//     // Bỏ dòng hash thủ công, lưu password gốc, model sẽ tự hash
+//     const user = new User({ name, email, password, role });
 //     await user.save();
 
 //     const token = jwt.sign(
 //       { id: user._id, name: user.name, email: user.email, role: user.role },
 //       JWT_SECRET,
-//       { expiresIn: "1d" }
+//       { expiresIn: "1d" },
 //     );
 
 //     res.json({
@@ -34,32 +59,38 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
 //     res.status(500).json({ error: err.message });
 //   }
 // });
-router.post("/register", async (req, res) => {
-  try {
-    const { name, email, password, role = "user" } = req.body;
-    const exist = await User.findOne({ email });
-    if (exist) return res.status(400).json({ message: "Email đã tồn tại" });
+// // Đăng nhập
+// // router.post("/login", async (req, res) => {
+// //   try {
+// //     const { email, password } = req.body;
+// //     const user = await User.findOne({ email });
+// //     if (!user)
+// //       return res.status(400).json({ message: "Sai email hoặc mật khẩu" });
 
-    // Bỏ dòng hash thủ công, lưu password gốc, model sẽ tự hash
-    const user = new User({ name, email, password, role });
-    await user.save();
+// //     const valid = await bcrypt.compare(password, user.password);
+// //     if (!valid)
+// //       return res.status(400).json({ message: "Sai email hoặc mật khẩu" });
 
-    const token = jwt.sign(
-      { id: user._id, name: user.name, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "1d" },
-    );
+// //     const token = jwt.sign(
+// //       { id: user._id, name: user.name, email: user.email, role: user.role },
+// //       JWT_SECRET,
+// //       { expiresIn: "1d" }
+// //     );
 
-    res.json({
-      message: "Đăng ký thành công",
-      user: { id: user._id, name, email, role },
-      token,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// Đăng nhập
+// //     res.json({
+// //       message: "Đăng nhập thành công",
+// //       user: {
+// //         id: user._id,
+// //         name: user.name,
+// //         email: user.email,
+// //         role: user.role,
+// //       },
+// //       token,
+// //     });
+// //   } catch (err) {
+// //     res.status(500).json({ error: err.message });
+// //   }
+// // });
 // router.post("/login", async (req, res) => {
 //   try {
 //     const { email, password } = req.body;
@@ -71,10 +102,18 @@ router.post("/register", async (req, res) => {
 //     if (!valid)
 //       return res.status(400).json({ message: "Sai email hoặc mật khẩu" });
 
+//     // Lưu user vào session
+//     req.session.user = {
+//       id: user._id,
+//       name: user.name,
+//       email: user.email,
+//       role: user.role,
+//     };
+
 //     const token = jwt.sign(
 //       { id: user._id, name: user.name, email: user.email, role: user.role },
 //       JWT_SECRET,
-//       { expiresIn: "1d" }
+//       { expiresIn: "1d" },
 //     );
 
 //     res.json({
@@ -91,6 +130,65 @@ router.post("/register", async (req, res) => {
 //     res.status(500).json({ error: err.message });
 //   }
 // });
+// // Middleware kiểm tra token và role admin
+// const authenticateAdmin = (req, res, next) => {
+//   const authHeader = req.headers.authorization;
+//   if (!authHeader) return res.status(401).json({ message: "Không có token" });
+
+//   const token = authHeader.split(" ")[1];
+//   jwt.verify(token, JWT_SECRET, (err, user) => {
+//     if (err) return res.status(403).json({ message: "Token không hợp lệ" });
+//     if (user.role !== "admin")
+//       return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+//     req.user = user;
+//     next();
+//   });
+// };
+
+// router.get("/me", authenticateAdmin, (req, res) => {
+//   res.json({ user: req.user });
+// });
+
+// module.exports = router;
+const express = require("express");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
+const router = express.Router();
+
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
+
+// Token sống 7 ngày (có thể đổi thành "30d" nếu muốn)
+const JWT_EXPIRES = "7d";
+
+// ==================== ĐĂNG KÝ ====================
+router.post("/register", async (req, res) => {
+  try {
+    const { name, email, password, role = "user" } = req.body;
+    const exist = await User.findOne({ email });
+    if (exist) return res.status(400).json({ message: "Email đã tồn tại" });
+
+    const user = new User({ name, email, password, role });
+    await user.save();
+
+    const token = jwt.sign(
+      { id: user._id, name: user.name, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES },
+    );
+
+    res.json({
+      message: "Đăng ký thành công",
+      user: { id: user._id, name, email, role },
+      token,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== ĐĂNG NHẬP ====================
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -102,7 +200,7 @@ router.post("/login", async (req, res) => {
     if (!valid)
       return res.status(400).json({ message: "Sai email hoặc mật khẩu" });
 
-    // Lưu user vào session
+    // Session (nếu bạn vẫn dùng)
     req.session.user = {
       id: user._id,
       name: user.name,
@@ -113,7 +211,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user._id, name: user.name, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: "1d" },
+      { expiresIn: JWT_EXPIRES },
     );
 
     res.json({
@@ -130,7 +228,33 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// Middleware kiểm tra token và role admin
+
+// ==================== KIỂM TRA TOKEN (dùng cho mọi user) ====================
+router.get("/check", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Không có token" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+    }
+    res.json({
+      user: {
+        id: decoded.id,
+        name: decoded.name,
+        email: decoded.email,
+        role: decoded.role,
+      },
+    });
+  });
+});
+
+// ==================== ADMIN ONLY ====================
 const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ message: "Không có token" });
